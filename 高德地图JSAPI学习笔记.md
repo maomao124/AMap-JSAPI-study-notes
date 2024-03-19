@@ -144,7 +144,7 @@ https://console.amap.com/dev/key/app
 
 
 
-#### 第四步：获取key和密钥
+### 第四步：获取key和密钥
 
 创建成功后，可获取 key 和安全密钥
 
@@ -945,6 +945,674 @@ export default {
 
 
 ![image-20240301175949887](img/高德地图JSAPI学习笔记/image-20240301175949887.png)
+
+
+
+
+
+
+
+## vue3
+
+
+
+### 第一步：创建项目
+
+![image-20240313142441847](img/高德地图JSAPI学习笔记/image-20240313142441847.png)
+
+
+
+![image-20240313142456088](img/高德地图JSAPI学习笔记/image-20240313142456088.png)
+
+
+
+
+
+### 第二步：安装依赖
+
+```sh
+npm i @amap/amap-jsapi-loader --save
+```
+
+
+
+```sh
+
+```
+
+
+
+### 第三步：新建文件
+
+在sr/view目录下新建一个vue文件
+
+
+
+
+
+
+
+### 第四步：创建地图容器
+
+```vue
+<template>
+    <div id="container"></div>
+</template>
+
+<script setup>
+
+</script>
+
+<style scoped>
+
+</style>
+
+```
+
+
+
+
+
+### 第五步：设置样式
+
+```vue
+<template>
+    <div id="container"></div>
+</template>
+
+<script setup>
+
+</script>
+
+<style scoped>
+#container {
+    padding: 0px;
+    margin: 0px;
+    width: 100%;
+    height: 800px;
+}
+</style>
+
+```
+
+
+
+
+
+### 第六步：导入依赖
+
+```vue
+<template>
+    <div id="container"></div>
+</template>
+
+<script setup>
+import AMapLoader from '@amap/amap-jsapi-loader';
+
+</script>
+
+<style scoped>
+#container {
+    padding: 0px;
+    margin: 0px;
+    width: 100%;
+    height: 800px;
+}
+</style>
+
+```
+
+
+
+
+
+### 第七步：完善代码
+
+```vue
+<template>
+    <div id="container"></div>
+</template>
+
+<script setup>
+import AMapLoader from '@amap/amap-jsapi-loader';
+import {onBeforeMount, onMounted, onUnmounted} from 'vue'
+
+onBeforeMount(()=>
+{
+    window._AMapSecurityConfig = {
+        serviceHost: `http://127.0.0.1:8089/_AMapService`
+    }
+})
+
+onMounted(()=>
+{
+    initAMap();
+})
+
+onUnmounted(()=>
+{
+    this.map?.destroy();
+})
+
+/**
+ * 初始化高德地图
+ */
+function initAMap()
+{
+    AMapLoader.load({
+        key: "318d115b92dd7beb6e26260a2e208256", // 申请好的Web端开发者Key，首次调用 load 时必填
+        version: "2.0", // 指定要加载的 JSAPI 的版本，缺省时默认为 1.4.15
+        // 需要使用的的插件列表，如比例尺'AMap.Scale'等
+        plugin: [
+            'AMap.Autocomplete', // 输入提示插件
+            'AMap.PlaceSearch', // POI搜索插件
+            'AMap.Scale', // 右下角缩略图插件 比例尺
+            'AMap.OverView', // 地图鹰眼插件
+            'AMap.ToolBar', // 地图工具条
+            'AMap.Geolocation', // 定位控件，用来获取和展示用户主机所在的经纬度位置
+            'AMap.MarkerClusterer',
+            'AMap.Geocoder'
+        ],
+    })
+        .then((AMap) =>
+        {
+            this.map = new AMap.Map("container", {
+                // 设置地图容器id
+                viewMode: "3D", // 是否为3D地图模式
+                zoom: 12, // 初始化地图级别
+                center: [111.397428, 23.90923], // 初始化地图中心点位置
+            });
+        })
+        .catch((e) =>
+        {
+            console.log(e);
+        });
+}
+
+</script>
+
+<style scoped>
+#container {
+    padding: 0px;
+    margin: 0px;
+    width: 100%;
+    height: 800px;
+}
+</style>
+
+```
+
+
+
+
+
+
+
+
+
+## 封装
+
+在src/utils下创建`amapUtils.ts`
+
+```typescript
+import AMapLoader from '@amap/amap-jsapi-loader';
+
+
+const defaultPlugin: Array<string> = [
+    'AMap.Autocomplete', // 输入提示插件
+    'AMap.PlaceSearch', // POI搜索插件
+    'AMap.Scale', // 右下角缩略图插件 比例尺
+    'AMap.OverView', // 地图鹰眼插件
+    'AMap.ToolBar', // 地图工具条
+    'AMap.Geolocation', // 定位控件，用来获取和展示用户主机所在的经纬度位置
+    'AMap.MarkerClusterer',
+    'AMap.Geocoder'
+];
+
+/**
+ * 初始化地图
+ * @param that vue视图的this指针
+ * @param pluginList 插件列表
+ * @param key 高德地图的key
+ */
+export function initAMap(that: any, pluginList: Array<string>, key: string): any
+{
+    window._AMapSecurityConfig = {
+        serviceHost: `http://127.0.0.1:8089/_AMapService`
+    }
+    const plugin = pluginList ? pluginList : defaultPlugin
+    AMapLoader.load({
+        key: key ? key : "318d115b92dd7beb6e26260a2e208256", // 申请好的Web端开发者Key，首次调用 load 时必填
+        version: "2.0", // 指定要加载的 JSAPI 的版本，缺省时默认为 1.4.15
+        // 需要使用的的插件列表，如比例尺'AMap.Scale'等
+        plugin: plugin,
+    })
+        .then((AMap: any) =>
+        {
+            const map = new AMap.Map("container", {
+                // 设置地图容器id
+                viewMode: "3D", // 是否为3D地图模式
+                zoom: 12, // 初始化地图级别
+                center: [111.397428, 23.90923], // 初始化地图中心点位置
+            });
+            that.map = map;
+        })
+        .catch((e: Error) =>
+        {
+            console.log('加载失败：', e);
+        });
+}
+
+/**
+ * 销毁地图
+ * @param map 高德地图容器对象
+ */
+export function destroy(map: any): void
+{
+    map?.destroy();
+}
+
+```
+
+
+
+
+
+在src目录下创建`env.d.ts`
+
+```typescript
+declare module "@amap/amap-jsapi-loader";
+```
+
+
+
+在src目录下创建`global.d.ts`
+
+```typescript
+
+// src/global.d.ts
+export {}
+
+declare global {
+    interface Window {
+        _AMapSecurityConfig: any;
+    }
+}
+
+declare const window: any;
+
+```
+
+
+
+使用示例：
+
+```vue
+<template>
+    <div id="container"></div>
+</template>
+
+<script>
+import {initAMap, destroy} from '../utils/amapUtils'
+
+export default {
+    name: "View1",
+    data()
+    {
+        return {
+            map: null,
+        }
+    },
+    methods: {},
+    created()
+    {
+        console.log("初始化")
+        initAMap(this);
+    },
+    beforeDestroy()
+    {
+        console.log("销毁")
+        destroy(this.map)
+    },
+}
+</script>
+
+<style scoped>
+#container {
+    padding: 0px;
+    margin: 0px;
+    width: 100%;
+    height: 90vh;
+}
+</style>
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 入门
+
+## 图层
+
+### 概述
+
+JS API 支持官方图层、三方图层、数据图层等
+
+实时交通路况图层`AMap.TileLayer.Traffic`
+
+
+
+1. 标准图层 [TileLayer](https://lbs.amap.com/api/jsapi-v2/documentation#tilelayer)
+2. 卫星图层 [TileLayer.Satellite](https://lbs.amap.com/api/jsapi-v2/documentation#Satellite)
+3. 路网图层 [TileLayer.RoadNet](https://lbs.amap.com/api/jsapi-v2/documentation#RoadNet)
+4. 实时交通图层 [TileLayer.Traffic](https://lbs.amap.com/api/jsapi-v2/documentation#Traffic)
+5. 楼块图层 [Buildings](https://lbs.amap.com/api/jsapi-v2/documentation#buildings)
+6. 室内图层 [IndoorMap](https://lbs.amap.com/api/jsapi-v2/documentation#indoormap)
+
+
+
+### 使用
+
+创建图层
+
+```js
+const layer = new AMap.createDefaultLayer({
+  zooms: [3, 20], //可见级别
+  visible: true, //是否可见
+  opacity: 1, //透明度
+  zIndex: 0, //叠加层级
+});
+```
+
+
+
+加载图层
+
+```js
+const map = new AMap.Map("container", {
+  viewMode: "2D", //默认使用 2D 模式
+  zoom: 11, //地图级别
+  center: [116.397428, 39.90923], //地图中心点
+  layers: [layer], //layer为创建的默认图层
+});
+```
+
+
+
+```vue
+<template>
+    <div>
+        <div id="container"></div>
+        <button @click="addLayer">加载图层</button>
+    </div>
+</template>
+
+<script>
+import {initAMap, destroy} from '../utils/amapUtils'
+
+export default {
+    name: "View2",
+    data()
+    {
+        return {
+            map: null,
+        }
+    },
+    methods: {
+        addLayer()
+        {
+            const layer = new AMap.createDefaultLayer({
+                zooms: [3, 20], //可见级别
+                visible: true, //是否可见
+                opacity: 1, //透明度
+                zIndex: 0, //叠加层级
+            });
+            this.map.setLayers(layer);
+        },
+    },
+    created()
+    {
+        console.log("初始化")
+        initAMap(this);
+    },
+    beforeDestroy()
+    {
+        console.log("销毁")
+        destroy(this.map)
+    },
+}
+</script>
+
+<style scoped>
+#container {
+    padding: 0px;
+    margin: 0px;
+    width: 100%;
+    height: 90vh;
+}
+</style>
+
+```
+
+
+
+
+
+
+
+### **实时交通路况图层**
+
+**AMap.TileLayer.Traffic**
+
+| **参数/方法** | **说明**     | **类型** | **参数值描述**           | **默认值** |
+| ------------- | ------------ | -------- | ------------------------ | ---------- |
+| autoRefresh   | 是否自动刷新 | Boolean  | true \| false            | false      |
+| interval      | 刷新间隔     | Number   | 自动更新数据间隔的毫秒数 | 180        |
+
+
+
+添加图层使用map.add(traffic)，移除路况图层：map.remove(traffic)
+
+
+
+```vue
+<template>
+    <div>
+        <div id="container"></div>
+        <button @click="addLayer">加载图层</button>
+        <button @click="addTraffic">创建实时交通路况图层</button>
+        <button @click="showTraffic">显示路况图层</button>
+        <button @click="hideTraffic">隐藏路况图层</button>
+    </div>
+</template>
+
+<script>
+import {initAMap, destroy} from '../utils/amapUtils'
+
+export default {
+    name: "View2",
+    data()
+    {
+        return {
+            map: null,
+            traffic: null,
+        }
+    },
+    methods: {
+        addLayer()
+        {
+            const layer = new AMap.createDefaultLayer({
+                zooms: [3, 20], //可见级别
+                visible: true, //是否可见
+                opacity: 1, //透明度
+                zIndex: 0, //叠加层级
+            });
+            this.map.setLayers(layer);
+        },
+        addTraffic()
+        {
+            if (this.traffic)
+            {
+                return;
+            }
+            const traffic = new AMap.TileLayer.Traffic({
+                autoRefresh: true, //是否自动刷新，默认为false
+                interval: 60, //刷新间隔，默认180s
+            });
+            this.traffic = traffic;
+            this.map.add(traffic);
+        },
+        showTraffic()
+        {
+            if (this.traffic)
+            {
+                this.traffic.show();
+            }
+        },
+        hideTraffic()
+        {
+            if (this.traffic)
+            {
+                this.traffic.hide();
+            }
+        }
+    },
+    created()
+    {
+        console.log("初始化")
+        initAMap(this);
+    },
+    beforeDestroy()
+    {
+        console.log("销毁")
+        destroy(this.map)
+    },
+}
+</script>
+
+<style scoped>
+#container {
+    padding: 0px;
+    margin: 0px;
+    width: 100%;
+    height: 90vh;
+}
+</style>
+```
+
+
+
+
+
+![image-20240319145059408](img/高德地图JSAPI学习笔记/image-20240319145059408.png)
+
+
+
+显示后：
+
+![image-20240319145112008](img/高德地图JSAPI学习笔记/image-20240319145112008.png)
+
+
+
+
+
+
+
+### 卫星与路网图层
+
+```vue
+<template>
+    <div>
+        <div id="container"></div>
+        <button @click="addTraffic">创建卫星与路网图层</button>
+        <button @click="showTraffic">显示图层</button>
+        <button @click="hideTraffic">隐藏图层</button>
+    </div>
+</template>
+
+<script>
+import {initAMap, destroy} from '../utils/amapUtils'
+
+export default {
+    name: "View3",
+    data()
+    {
+        return {
+            map: null,
+            traffic: null,
+        }
+    },
+    methods: {
+        addTraffic()
+        {
+            if (this.traffic)
+            {
+                return;
+            }
+            const traffic = new AMap.TileLayer.Satellite();
+            //创建路网图层
+            var roadNet = new AMap.TileLayer.RoadNet();
+            this.traffic = traffic;
+            this.map.setLayers([traffic, roadNet]);
+        },
+        showTraffic()
+        {
+            if (this.traffic)
+            {
+                this.traffic.show();
+            }
+        },
+        hideTraffic()
+        {
+            if (this.traffic)
+            {
+                this.traffic.hide();
+            }
+        }
+    },
+    created()
+    {
+        console.log("初始化")
+        initAMap(this);
+    },
+    beforeDestroy()
+    {
+        console.log("销毁")
+        destroy(this.map)
+    },
+}
+</script>
+
+<style scoped>
+#container {
+    padding: 0px;
+    margin: 0px;
+    width: 100%;
+    height: 90vh;
+}
+</style>
+
+```
+
+
+
+![image-20240319154347709](img/高德地图JSAPI学习笔记/image-20240319154347709.png)
+
+
+
+
+
+![image-20240319154416612](img/高德地图JSAPI学习笔记/image-20240319154416612.png)
 
 
 
