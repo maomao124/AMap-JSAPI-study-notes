@@ -14,6 +14,8 @@
 
 地图 JS API 2.0 是高德开放平台免费提供的第四代 Web 地图渲染引擎， 以 WebGL 为主要绘图手段，本着“更轻、更快、更易用”的服务原则，广泛采用了各种前沿技术，交互体验、视觉体验大幅提升，同时提供了众多新增能力和特性
 
+**高德地图使用 Web 墨卡托投影，即采用 EPSG:3857 坐标系统**
+
 
 
 
@@ -1173,9 +1175,10 @@ const defaultPlugin: Array<string> = [
  * 初始化地图
  * @param that vue视图的this指针
  * @param pluginList 插件列表
+ * @param param 参数
  * @param key 高德地图的key
  */
-export function initAMap(that: any, pluginList: Array<string>, key: string): any
+export function initAMap(that: any, pluginList: Array<string>, param: object, key: string): any
 {
     window._AMapSecurityConfig = {
         serviceHost: `http://127.0.0.1:8089/_AMapService`
@@ -1189,12 +1192,13 @@ export function initAMap(that: any, pluginList: Array<string>, key: string): any
     })
         .then((AMap: any) =>
         {
-            const map = new AMap.Map("container", {
+            const params = param ? param : {
                 // 设置地图容器id
                 viewMode: "3D", // 是否为3D地图模式
                 zoom: 12, // 初始化地图级别
                 center: [111.397428, 23.90923], // 初始化地图中心点位置
-            });
+            }
+            const map = new AMap.Map("container", params);
             that.map = map;
         })
         .catch((e: Error) =>
@@ -1617,4 +1621,490 @@ export default {
 
 
 
+
+### 楼块图层
+
+楼块图层用于展示矢量建筑物，与标准图层中的楼块要素的效果相同。二者区别在于，楼块图层可以用来实现一些特殊的效果，如 3D 视图下为楼块指定高度比例系数heightFactor
+
+楼块图层的有效缩放级别范围为[ 17, 20 ]
+
+创建楼块图层需要在初始化地图的时候设置showBuildingBlock: false属性，此属性会展示默认的楼块图层，此时再创建楼块图层会存在两个楼块图层
+
+
+
+```vue
+<template>
+    <div>
+        <div id="container"></div>
+        <button @click="addTraffic">创建楼块图层</button>
+        <button @click="showTraffic">显示楼块图层</button>
+        <button @click="hideTraffic">隐藏楼块图层</button>
+    </div>
+</template>
+
+<script>
+import {initAMap, destroy} from '../utils/amapUtils'
+
+export default {
+    name: "View4",
+    data()
+    {
+        return {
+            map: null,
+            traffic: null,
+        }
+    },
+    methods: {
+        addTraffic()
+        {
+            if (this.traffic)
+            {
+                return;
+            }
+            const traffic =  new AMap.Buildings({
+                zooms: [17, 20],
+                zIndex: 10,
+                heightFactor: 2, //2倍于默认高度（3D 视图下生效）
+            });
+            this.traffic = traffic;
+            this.map.add(traffic);
+        },
+        showTraffic()
+        {
+            if (this.traffic)
+            {
+                this.traffic.show();
+            }
+        },
+        hideTraffic()
+        {
+            if (this.traffic)
+            {
+                this.traffic.hide();
+            }
+        }
+    },
+    created()
+    {
+        console.log("初始化")
+        initAMap(this,undefined,{
+            center: [116.397428, 39.90923], //地图中心点
+            viewMode: "3D", //地图模式
+            pitch: 60, //俯仰角度
+            rotation: -35, //地图顺时针旋转角度
+            zoom: 17, //地图级别
+            showBuildingBlock: false,
+        });
+    },
+    beforeDestroy()
+    {
+        console.log("销毁")
+        destroy(this.map)
+    },
+}
+</script>
+
+<style scoped>
+#container {
+    padding: 0px;
+    margin: 0px;
+    width: 100%;
+    height: 88vh;
+}
+</style>
+
+```
+
+
+
+
+
+![image-20240319160404612](img/高德地图JSAPI学习笔记/image-20240319160404612.png)
+
+
+
+![image-20240319160456804](img/高德地图JSAPI学习笔记/image-20240319160456804.png)
+
+
+
+
+
+
+
+
+
+## 地图控件
+
+### 概述
+
+JS API 提供了众多的控件，需要引入之后才能使用这些控件的功能
+
+| ![img](https://a.amap.com/lbs/static/img/doc/doc_1700725909225_d2b5c.png)**缩放控件** AMap.ToolBar地图的放大和缩小 | ![img](https://a.amap.com/lbs/static/img/doc/doc_1700725938590_d2b5c.png)**比例尺控件** AMap.Scale显示当前地图的比例尺 | ![img](https://a.amap.com/lbs/static/img/doc/doc_1700726021471_d2b5c.png)**控制罗盘控件** AMap.ControlBar控制地图旋转和倾斜 |
+| ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+|                                                              |                                                              |                                                              |
+| ![img](https://a.amap.com/lbs/static/img/doc/doc_1700726683292_d2b5c.png)**定位控件**AMap.Geolocation提供定位功能 | ![img](https://a.amap.com/lbs/static/img/doc/doc_1700726215601_d2b5c.png)**鹰眼控件** AMap.HawkEye地图缩略图，标记当前展示区域 | ![img](img/高德地图JSAPI学习笔记/doc_1700726619892_d2b5c.png)**图层切换控件** AMap.MapType切换不同的地图类型 |
+
+
+
+
+
+### **插件列表**
+
+| **类名**               | **类功能说明**                                               | **相应教程**                                                 | **属性及方法说明**                                           |
+| ---------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| AMap.ElasticMarker     | 灵活点标记，可以随着地图级别改变样式和大小的 Marker          | [灵活点标记](https://lbs.amap.com/api/javascript-api-v2/guide/amap-marker/elasticmarker) | [AMap.ElasticMarker](https://lbs.amap.com/api/javascript-api-v2/documentation#elasticmarker) |
+| AMap.ToolBar           | 工具条，控制地图的缩放、平移等                               | [添加地图控件](https://lbs.amap.com/api/javascript-api-v2/tutorails/add-plugin) | [AMap.ToolBar](https://lbs.amap.com/api/javascript-api-v2/documentation#toolbar) |
+| AMap.Scale             | 比例尺，显示当前地图中心的比例尺                             | [AMap.Scale](https://lbs.amap.com/api/javascript-api-v2/documentation#scale) |                                                              |
+| AMap.HawkEye           | 鹰眼，用于显示缩略地图，显示于地图右下角，可以随主图的视口变化而变化 | [AMap.HawkEye](https://lbs.amap.com/api/javascript-api-v2/documentation#hawkeye) |                                                              |
+| AMap.ControlBar        | 组合了旋转、倾斜、复位在内的地图控件                         | [添加地图控件](https://lbs.amap.com/api/javascript-api-v2/tutorails/add-plugin) | [AMap.ControlBar](https://lbs.amap.com/api/javascript-api-v2/documentation#controlbar) |
+| AMap.MapType           | 图层切换，通过该插件可以进行地图切换                         | [JS API ](https://lbs.amap.com/demo/jsapi-v2/example/map-lifecycle/loader)[加载器](https://lbs.amap.com/demo/jsapi-v2/example/map-lifecycle/loader) | [AMap.MapType](https://lbs.amap.com/api/javascript-api-v2/documentation#maptype) |
+| AMap.Geolocation       | 浏览器定位，提供了获取用户当前准确位置、所在城市的方法       | [定位](https://lbs.amap.com/api/javascript-api-v2/guide/services/geolocation) | [AMap.Geolocation](https://lbs.amap.com/api/javascript-api-v2/documentation#geolocation) |
+| AMap.AutoComplete      | 输入提示，提供了根据关键字获得提示信息的功能                 | [输入提示与POI搜索](https://lbs.amap.com/api/javascript-api-v2/guide/services/autocomplete) | [AMap.AutoComplete](https://lbs.amap.com/api/javascript-api-v2/documentation#autocomplete) |
+| AMap.PlaceSearch       | 地点搜索服务，提供了关键字搜索、周边搜索、范围内搜索等功能   | [AMap.PlaceSearch](https://lbs.amap.com/api/javascript-api-v2/documentation#placesearch) |                                                              |
+| AMap.DistrictSearch    | 行政区查询服务，提供了根据名称关键字、citycode、adcode 来查询行政区信息的功能 | [行政区查询](https://lbs.amap.com/api/javascript-api-v2/guide/services/district-search) | [AMap.DistrictSearch](https://lbs.amap.com/api/javascript-api-v2/documentation#districtsearch) |
+| AMap.LineSearch        | 公交路线服务，提供公交路线相关信息查询服务                   | [公交线路与站点查询](https://lbs.amap.com/api/javascript-api-v2/guide/services/bus) | [AMap.LineSearch](https://lbs.amap.com/api/javascript-api-v2/documentation#linesearch) |
+| AMap.StationSearch     | 公交站点查询服务，提供途经公交线路、站点位置等信息           | [AMap.StationSearch](https://lbs.amap.com/api/javascript-api-v2/documentation#stationsearch) |                                                              |
+| AMap.Driving           | 驾车路线规划服务，提供按照起、终点进行驾车路线的功能         | [路线规划](https://lbs.amap.com/api/javascript-api-v2/guide/services/navigation) | [AMap.Driving](https://lbs.amap.com/api/javascript-api-v2/documentation#driving) |
+| AMap.TruckDriving      | 货车路线规划，提供起、终点坐标的驾车导航路线查询功能         | [AMap.TruckDriving](https://lbs.amap.com/api/javascript-api-v2/documentation#truckdriving) |                                                              |
+| AMap.Transfer          | 公交路线规划服务，提供按照起、终点进行公交路线的功能         | [AMap.Transfer](https://lbs.amap.com/api/javascript-api-v2/documentation#transfer) |                                                              |
+| AMap.Walking           | 步行路线规划服务，提供按照起、终点进行步行路线的功能         | [AMap.Walking](https://lbs.amap.com/api/javascript-api-v2/documentation#walking) |                                                              |
+| AMap.Riding            | 骑行路线规划服务，提供按照起、终点进行骑行路线的功能         | [AMap.Riding](https://lbs.amap.com/api/javascript-api-v2/documentation#riding) |                                                              |
+| AMap.DragRoute         | 拖拽导航插件，可拖拽起终点、途经点重新进行路线规划           | [AMap.DragRoute](https://lbs.amap.com/api/javascript-api-v2/documentation#dragroute) |                                                              |
+| AMap.Geocoder          | 地理编码与逆地理编码服务，提供地址与坐标间的相互转换         | [地理编码与逆地理编码](https://lbs.amap.com/api/javascript-api-v2/guide/services/geocoder) | [AMap.Geocoder](https://lbs.amap.com/api/javascript-api-v2/documentation#geocoder) |
+| AMap.CitySearch        | 城市获取服务，获取用户所在城市信息或根据给定IP参数查询城市信息 | [定位](https://lbs.amap.com/api/javascript-api-v2/guide/services/geolocation) | [AMap.CitySearch](https://lbs.amap.com/api/javascript-api-v2/documentation#citysearch) |
+| AMap.IndoorMap         | 室内地图，用于在地图中显示室内地图                           | [叠加室内地图](https://lbs.amap.com/demo/jsapi-v2/example/indoormap/add-indoormap) | [AMap.IndoorMap](https://lbs.amap.com/api/javascript-api-v2/documentation#indoormap) |
+| AMap.MouseTool         | 鼠标工具插件，用于鼠标画标记点、线、多边形、矩形、圆、距离量测、面积量测、拉框放大、拉框缩小等功能 | [绘制矢量图形](https://lbs.amap.com/api/javascript-api-v2/guide/services/mouse-tool) | [AMap.MouseTool](https://lbs.amap.com/api/javascript-api-v2/documentation#mousetool) |
+| AMap.CircleEditor      | 圆编辑插件，用于使用鼠标改变圆半径大小、拖拽圆心改变圆的位置 | [圆的绘制](https://lbs.amap.com/demo/jsapi-v2/example/overlayers/circle-draw-and-edit) | [AMap.CircleEditor](https://lbs.amap.com/api/javascript-api-v2/documentation#circleeditor) |
+| AMap.PolygonEditor     | 多边形编辑插件，用于通过鼠标调整多边形形状                   | [面编辑](https://lbs.amap.com/api/javascript-api-v2/guide/amap-polygon/polygonEditor) | [AMap.PolygonEditor](https://lbs.amap.com/api/javascript-api-v2/documentation#polygoneditor) |
+| AMap.PolylineEditor    | 折线编辑器，用于通过鼠标调整折线的形状                       | [折线编辑](https://lbs.amap.com/api/javascript-api-v2/guide/amap-line/line-editor) | [AMap.PolylineEditor](https://lbs.amap.com/api/javascript-api-v2/documentation#polylineeditor) |
+| AMap.RectangleEditor   | 矩形编辑器，用于通过鼠标调整矩形形状。                       | [矩形编辑](https://lbs.amap.com/demo/javascript-api/example/overlayers/rectangle-draw-and-edit) | [AMap.RectangleEditor](https://lbs.amap.com/api/javascript-api-v2/documentation#rectangleeditor) |
+| AMap.EllipseEditor     | 椭圆编辑器，用于通过鼠标调整椭圆形状。                       | [椭圆编辑](https://lbs.amap.com/demo/javascript-api/example/overlayers/ellipse-draw-and-edit) | [AMap.EllipseEditor](https://lbs.amap.com/api/javascript-api-v2/documentation#ellipseeditor) |
+| AMap.BezierCurveEditor | 贝塞尔曲线编辑器，用于通过鼠标调整贝塞尔曲线形状。           | [贝塞尔曲线编辑](https://lbs.amap.com/api/javascript-api-v2/guide/amap-line/beziercurve-editor) | [AMap.BezierCurveEditor](https://lbs.amap.com/api/javascript-api-v2/documentation#beziercurveeditor) |
+| AMap.MarkerCluster     | 点聚合插件，用于展示大量点标记，将点标记按照距离进行聚合，以提高绘制性能 | [点聚合](https://lbs.amap.com/api/javascript-api-v2/guide/amap-massmarker/marker-cluster) | [AMap.MarkerCluster](https://lbs.amap.com/api/javascript-api-v2/documentation#markercluster) |
+| AMap.RangingTool       | 测距插件，可以用距离或面积测量                               | [测距工具](https://lbs.amap.com/demo/jsapi-v2/example/mouse-operate-map/measure-distance) | [AMap.RangingTool](https://lbs.amap.com/api/javascript-api-v2/documentation#rangingtool) |
+| AMap.CloudDataSearch   | 云图搜索服务，根据关键字搜索云图点信息                       |                                                              | [AMap.CloudDataSearch](https://lbs.amap.com/api/javascript-api-v2/documentation#clouddatasearch) |
+| AMap.Weather           | 天气预报插件，用于获取未来的天气信息                         | [天气](https://lbs.amap.com/api/javascript-api-v2/guide/services/weather) | [AMap.Weather](https://lbs.amap.com/api/javascript-api-v2/documentation#weather) |
+| AMap.HeatMap           | 热力图插件（暂时不支持移动端，建议使用 [Loca 热力图](https://lbs.amap.com/demo/loca-v2/demos/cat-heatmap/heatmap-diff)） |                                                              | [AMap.HeatMap](https://lbs.amap.com/api/javascript-api-v2/documentation#heatmap) |
+
+
+
+
+
+
+
+### 引入地图控件
+
+```js
+//异步加载控件
+AMap.plugin('AMap.ToolBar',function(){ 
+  var toolbar = new AMap.ToolBar(); //缩放工具条实例化
+  map.addControl(toolbar);
+});
+```
+
+
+
+控制地图控件
+
+```js
+toolbar.show(); //缩放工具展示
+toolbar.hide(); //缩放工具隐藏
+```
+
+
+
+
+
+### 使用
+
+```vue
+<template>
+    <div>
+        <div id="container"></div>
+        <button @click="addItem1">添加工具条</button>
+        <button @click="showItem(0)">显示工具条</button>
+        <button @click="hideItem(0)">隐藏工具条</button>
+        <button @click="addItem2">添加比例尺</button>
+        <button @click="showItem(1)">显示比例尺</button>
+        <button @click="hideItem(1)">隐藏比例尺</button>
+        <button @click="addItem3">添加鹰眼</button>
+        <button @click="showItem(2)">显示鹰眼</button>
+        <button @click="hideItem(2)">隐藏鹰眼</button>
+        <button @click="addItem4">添加控制控件</button>
+        <button @click="showItem(3)">显示控制控件</button>
+        <button @click="hideItem(3)">隐藏控制控件</button>
+
+    </div>
+</template>
+
+<script>
+import {initAMap, destroy} from '../utils/amapUtils'
+
+export default {
+    name: "View1",
+    data()
+    {
+        return {
+            map: null,
+            itemList: {
+                item1: null,
+                item2: null,
+                item3: null,
+                item4: null,
+            }
+        }
+    },
+    methods: {
+        addItem1()
+        {
+            if (this.itemList.item1)
+            {
+                return;
+            }
+            AMap.plugin('AMap.ToolBar', () =>
+            {
+                this.itemList.item1 = new AMap.ToolBar();
+                this.map.addControl(this.itemList.item1);
+            });
+        },
+        addItem2()
+        {
+            if (this.itemList.item2)
+            {
+                return;
+            }
+            AMap.plugin('AMap.Scale', () =>
+            {
+                this.itemList.item2 = new AMap.Scale();
+                this.map.addControl(this.itemList.item2);
+            });
+        },
+        addItem3()
+        {
+            if (this.itemList.item3)
+            {
+                return;
+            }
+            AMap.plugin('AMap.HawkEye', () =>
+            {
+                this.itemList.item3 = new AMap.HawkEye();
+                this.map.addControl(this.itemList.item3);
+            });
+        },
+        addItem4()
+        {
+            if (this.itemList.item4)
+            {
+                return;
+            }
+            AMap.plugin('AMap.ControlBar', () =>
+            {
+                this.itemList.item4 = new AMap.ControlBar();
+                this.map.addControl(this.itemList.item4);
+            });
+        },
+
+        showItem(index)
+        {
+            const key = Object.keys(this.itemList)[index];
+            this.itemList[key].show();
+        },
+        hideItem(index)
+        {
+            const key = Object.keys(this.itemList)[index];
+            this.itemList[key].hide();
+        }
+    },
+    created()
+    {
+        console.log("初始化")
+        initAMap(this);
+    },
+    beforeDestroy()
+    {
+        console.log("销毁")
+        destroy(this.map)
+    },
+
+}
+</script>
+
+<style scoped>
+#container {
+    padding: 0px;
+    margin: 0px;
+    width: 100%;
+    height: 88vh;
+}
+</style>
+```
+
+
+
+![image-20240319163715327](img/高德地图JSAPI学习笔记/image-20240319163715327.png)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 地图组成和常用名词
+
+## 地图组成
+
+![image-20240319164359118](img/高德地图JSAPI学习笔记/image-20240319164359118.png)
+
+
+
+使用高德地图 JS API 创建的地图通常由这几部分组成：
+
+* 地图容器 Container
+* 图层 Layers
+* 矢量图形 Vector Overlays
+* 点标记 Markers
+* 地图控件 Map Controls
+
+
+
+
+
+### **地图容器 Container**
+
+即在准备阶段所创建的指定了 id 的`<div>`对象，这个`<div>`将作为承载所有图层、点标记、矢量图形、控件的容器
+
+
+
+### **图层 Layers**
+
+图层是指能够在视觉上覆盖一定地图范围，用来描述全部或者部分现实世界区域内的地图要素的抽象概念，一幅地图通常由一个或者多个图层组成。如上图中处于整个地图容器最下方的二维矢量图层和实施交通图层。
+
+
+
+### **矢量图形 Vector Overlays**
+
+矢量图形，一般覆盖于底图图层之上，通过矢量的方式(路径或者实际大小)来描述其形状，用几何的方式来展示真实的地图要素，会随着地图缩放而发生视觉大小的变化，但其代表的实际路径或范围不变，如上图中红框内的折线、圆、多边形等
+
+除了图中的折线、圆、多边形之外，JS API 还提供了矩形、椭圆、贝瑟尔曲线等常用的矢量图形。3D 视图下的立面体等可以看做是一些特殊的矢量图形
+
+
+
+### **点标记 Markers**
+
+点标记是用来标示某个位置点信息的一种地图要素，覆盖于图层之上。如图中蓝色方框中的两个点状要素。其在屏幕上的位置会随着地图的缩放和中心变化而发生改变，但是会与图层内的要素保持相对静止
+
+
+
+### **地图控件 Map Controls**
+
+控件浮在所有图层和地图要素之上，用于满足一定的交互或提示功能。一般相对于地图容器静止，不随着地图缩放和中心变化而发生位置的变化。如上图中绿色方框中的比例尺和级别控件
+
+
+
+
+
+
+
+## 常用名词
+
+### **插件 Plugins**
+
+插件是独立于 JS API 地图核心模块之外的一些功能，比如服务类、绘制工具、矢量图形编辑工具、点聚合、热力图等
+
+
+
+### **地图级别 ZoomLevel**
+
+级别与地图的比例尺成正比，每增大一级，地图的比例尺也增大一倍，地图显示的越详细。Web地图的最小级别通常为3级，最大级别各家略有不同，高德地图 JS API 目前最大级别为 **20** 级
+
+
+
+### **经纬度 LngLat**
+
+坐标通常指经纬度坐标，高德地图的坐标范围大致为：东西经 180 度（[-180, 180]，西半球为负，东半球为正），南北纬 85 度（[-85, 85]，北半球为正，南半球为负
+
+
+
+### **底图 BaseLayer**
+
+严格意义上，底图指处于所有图层和图形最下方的一个图层，通常不透明。可以是单一图层，比如官方标准图层，也可以是图层组合，比图卫星图层和路网图层组合
+
+
+
+### **地图要素 Map Features**
+
+严格意义的地图要素指的是展示在地图上的地理要素，包括道路、区域面、建筑、POI 标注、路名等。开发者自定义的点标记、矢量图形也可以看做是一种地图要素
+
+
+
+### **标注 Labels**
+
+我们习惯将底图上自带的标示一定信息的文字或图标称为标注，比如 POI 标注，道路名称标注等
+
+
+
+### **地图平面像素坐标 Plane Coordinates**
+
+地图平面像素坐标指投影为平面之后的地图上的平面像素坐标，高德地图使用的Web墨卡托投影，在 3 级时，平面坐标范围为横纵[0, 256*2^3]像素，每级别扩大一倍，即第 n 级的平面坐标范围为 [0, -256*2^n]像素
+
+
+
+### **投影 Projection**
+
+地图投影指的是将地球球面的经纬度坐标映射到地图平面坐标的变换和映射关系
+
+
+
+
+
+
+
+
+
+
+
+# 基础类
+
+## 概述
+
+使用 JS API 开发之前有几个基础类型需要了解一下，包括：
+
+1. 经纬度AMap.LngLat 
+2. 像素点AMap.Pixel
+3. 像素尺寸 AMap.Size
+4. 经纬度矩形边界 AMap.Bounds
+
+
+
+
+
+## 经纬度
+
+### 概述
+
+经纬度是利用三维球面空间来描述地球上一个位置的坐标系统，每个经纬度坐标由经度 lng 和纬度 lat 两个分量组成。在 JS API 里使用经纬度来表示地图的中心点center、点标记的位置position、圆的中心点center、折线和多边形的路径path等，以及其他所有表述实际位置的地方
+
+**经纬度的有效范围为 [-180, 180]，纬度大约为 [-85, 85]**
+
+
+
+
+
+### 使用
 
