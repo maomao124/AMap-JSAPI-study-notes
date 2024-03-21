@@ -16,6 +16,8 @@
 
 **高德地图使用 Web 墨卡托投影，即采用 EPSG:3857 坐标系统**
 
+**高德地图采用 GCJ-02 坐标系，即火星坐标系**
+
 
 
 
@@ -42,7 +44,7 @@
 
 
 
-# 成为开放者
+# 成为开发者
 
 ## 概述
 
@@ -2098,7 +2100,7 @@ export default {
 
 ### 概述
 
-经纬度是利用三维球面空间来描述地球上一个位置的坐标系统，每个经纬度坐标由经度 lng 和纬度 lat 两个分量组成。在 JS API 里使用经纬度来表示地图的中心点center、点标记的位置position、圆的中心点center、折线和多边形的路径path等，以及其他所有表述实际位置的地方
+经纬度（**AMap.LngLat**）是利用三维球面空间来描述地球上一个位置的坐标系统，每个经纬度坐标由经度 lng 和纬度 lat 两个分量组成。在 JS API 里使用经纬度来表示地图的中心点center、点标记的位置position、圆的中心点center、折线和多边形的路径path等，以及其他所有表述实际位置的地方
 
 **经纬度的有效范围为 [-180, 180]，纬度大约为 [-85, 85]**
 
@@ -2107,4 +2109,376 @@ export default {
 
 
 ### 使用
+
+```js
+var position = new AMap.LngLat(116, 39);//标准写法
+var position = [116, 39]; //简写
+var map = new AMap.Center('conatiner',{
+  center:position
+})
+```
+
+
+
+
+
+```js
+var path = [new AMap.LngLat(116,39), new AMap.LngLat(116,40), new AMap.LngLat(117,39)] //标准写法
+var path = [ [116,39], [116,40], [117,39] ]; //简写
+var polyline = new AMap.Polyline({
+  path : path,
+})
+map.add(polyline);
+```
+
+
+
+
+
+```vue
+<template>
+    <div>
+        <div id="container"></div>
+        <button @click="addPoint1">添加点1</button>
+        <button @click="addPoint2">添加点2</button>
+    </div>
+</template>
+
+<script>
+import {initAMap, destroy} from '../utils/amapUtils'
+
+export default {
+    name: "View1",
+    data()
+    {
+        return {
+            map: null,
+        }
+    },
+    methods: {
+        addPoint1()
+        {
+            const marker = new AMap.Marker({
+                title: '标记点1',
+                position: new AMap.LngLat(113.34, 23.6532),
+            })
+            this.map.add(marker)
+        },
+        addPoint2()
+        {
+            const marker = new AMap.Marker({
+                title: '标记点1',
+                position: [114.45, 23.765]
+            })
+            this.map.add(marker)
+        },
+
+    },
+    created()
+    {
+        console.log("初始化")
+        initAMap(this);
+    },
+    beforeDestroy()
+    {
+        console.log("销毁")
+        destroy(this.map)
+    },
+}
+</script>
+
+<style scoped>
+#container {
+    padding: 0px;
+    margin: 0px;
+    width: 100%;
+    height: 90vh;
+}
+</style>
+```
+
+
+
+![image-20240321110815041](img/高德地图JSAPI学习笔记/image-20240321110815041.png)
+
+
+
+
+
+使用经纬度类型可以进行一些简单的位置计算，比如点与点、点与线的距离，根据距离差计算另一个经纬度等
+
+
+
+```js
+var lnglat1 = new AMap.LngLat(116, 39);
+var lnglat2 = new AMap.LngLat(117, 39);
+var distance = lnglat1.distance(lnglat2);//计算lnglat1到lnglat2之间的实际距离(m)
+var lnglat3 = lnglat1.offset(100,50)//lnglat1向东100m，向北50m的位置的经纬度
+```
+
+
+
+
+
+```vue
+<template>
+    <div>
+        <div id="container"></div>
+    </div>
+</template>
+
+<script>
+import {initAMap, destroy} from '../utils/amapUtils'
+
+export default {
+    name: "View8",
+    data()
+    {
+        return {
+            map: null,
+            marker1: null,
+            marker2: null,
+        }
+    },
+    watch:
+        {
+            map(map)
+            {
+                if (map)
+                {
+                    this.map.on('click', (e) =>
+                    {
+                        console.log(e.lnglat)
+                        if (this.marker1 == null)
+                        {
+                            console.log("1")
+                            this.marker1 = new AMap.Marker({
+                                position: e.lnglat
+                            })
+                            this.map.add(this.marker1)
+                            return;
+                        }
+                        if (this.marker1 != null)
+                        {
+                            this.marker2 = new AMap.Marker({
+                                position: e.lnglat
+                            })
+                            this.map.add(this.marker2)
+                            console.log(this.marker1.getPosition())
+                            const position = this.marker1.getPosition()
+                            const distance = position.distance(e.lnglat);
+                            window.alert("距离：" + distance + "米");
+                            //lnglat1向东1000m，向北500m的位置的经纬度
+                            const lnglat3 = e.lnglat.offset(1000, 500)
+                            const marker3 = new AMap.Marker({
+                                position: lnglat3
+                            })
+                            this.map.add(marker3);
+                            this.map.remove(this.marker1)
+                            this.map.remove(this.marker2)
+                            this.marker1 = null;
+                            this.marker2 = null;
+                        }
+                    })
+                }
+            }
+        },
+    methods: {},
+    created()
+    {
+        console.log("初始化")
+        initAMap(this);
+    },
+    beforeDestroy()
+    {
+        console.log("销毁")
+        destroy(this.map)
+    },
+}
+</script>
+
+<style scoped>
+#container {
+    padding: 0px;
+    margin: 0px;
+    width: 100%;
+    height: 90vh;
+}
+</style>
+
+```
+
+
+
+
+
+
+
+
+
+
+
+## 像素点
+
+### 概述
+
+像素点（**AMap.Pixel**）由 **x** 和 **y** 两个分量组成，通常用来描述地图的容器坐标、地理像素坐标 (平面像素坐标)、点标记和信息窗体的的锚点等
+
+
+
+
+
+### 使用
+
+```js
+var offset  = new AMap.Pixel(-16,-30);
+var marker = new AMap.Marker({
+  offset:offset,
+  icon:'xxx.png',
+});
+map.add(marker);
+```
+
+
+
+
+
+```vue
+<template>
+    <div>
+        <div id="container"></div>
+        <button @click="add">添加像素点</button>
+    </div>
+</template>
+
+<script>
+import {initAMap, destroy} from '../utils/amapUtils'
+
+export default {
+    name: "View8",
+    data()
+    {
+        return {
+            map: null,
+        }
+    },
+    methods: {
+        add()
+        {
+            const offset = new AMap.Pixel(-16, -30);
+            const marker = new AMap.Marker({
+                position: [113, 23],
+                offset: offset,
+            });
+            this.map.add(marker);
+        },
+    },
+    created()
+    {
+        console.log("初始化")
+        initAMap(this);
+    },
+    beforeDestroy()
+    {
+        console.log("销毁")
+        destroy(this.map)
+    },
+}
+</script>
+
+<style scoped>
+#container {
+    padding: 0px;
+    margin: 0px;
+    width: 100%;
+    height: 90vh;
+}
+</style>
+
+```
+
+
+
+
+
+## 像素尺寸
+
+### 概述
+
+像素尺寸（**AMap.Size**）由width和height两个分量构成，通常用来描述具有一定大小的对象，比如地图的尺寸，图标的尺寸等
+
+
+
+```vue
+<template>
+    <div>
+        <div id="container"></div>
+        <button @click="add">添加点</button>
+    </div>
+</template>
+
+<script>
+import {initAMap, destroy} from '../utils/amapUtils'
+
+export default {
+    name: "View8",
+    data()
+    {
+        return {
+            map: null,
+        }
+    },
+    methods: {
+        add()
+        {
+            const offset = new AMap.Pixel(-16, -30);
+            const marker = new AMap.Marker({
+                position: [113, 23],
+                offset: offset,
+                size: new AMap.Size(400, 500),
+                imageOffset: new AMap.Pixel(0, -60),
+                image: "https://webapi.amap.com/theme/v1.3/images/newpc/way_btn2.png",
+            });
+            this.map.add(marker);
+        },
+    },
+    created()
+    {
+        console.log("初始化")
+        initAMap(this);
+    },
+    beforeDestroy()
+    {
+        console.log("销毁")
+        destroy(this.map)
+    },
+}
+</script>
+
+<style scoped>
+#container {
+    padding: 0px;
+    margin: 0px;
+    width: 100%;
+    height: 90vh;
+}
+</style>
+
+```
+
+
+
+
+
+
+
+
+
+
+
+# 地图
+
+## 生命周期
+
+
 
