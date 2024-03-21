@@ -2480,5 +2480,531 @@ export default {
 
 ## 生命周期
 
+生命周期，分为四个阶段：
+
+1. 创建地图对象
+2. 地图加载完成
+3. 地图运行阶段
+4. 销毁地图对象
+
+
+
+
+
+在创建地图对象阶段，可通过传入地图初始化参数来设置地图的初始状态。例如：中心点、地图视图模式、地图样式等
+
+
+
+地图加载完成后会触发complete事件，可以在这个事件中执行一些地图的其他操作，例如：添加覆盖物、绑定交互事件。根据需求，自动定位到某个城市或显示某些标记点等
+
+```js
+map.on('complete', function(){
+  //地图图块加载完成后触发
+});
+```
+
+
+
+```vue
+<template>
+    <div>
+        <div id="container"></div>
+    </div>
+</template>
+
+<script>
+import {initAMap, destroy} from '../utils/amapUtils'
+
+export default {
+    name: "View1",
+    data()
+    {
+        return {
+            map: null,
+        }
+    },
+    watch:
+        {
+            map(map)
+            {
+                console.log("map对象变化")
+                map.on('complete', function ()
+                {
+                    //地图图块加载完成后触发
+                    console.log("加载完成")
+                });
+            }
+        },
+    methods: {},
+    created()
+    {
+        console.log("初始化")
+        initAMap(this);
+    },
+    beforeDestroy()
+    {
+        console.log("销毁")
+        destroy(this.map)
+    },
+}
+</script>
+
+<style scoped>
+#container {
+    padding: 0px;
+    margin: 0px;
+    width: 100%;
+    height: 90vh;
+}
+</style>
+
+```
+
+
+
+
+
+运行阶段指地图对象加载完成后，地图对象销毁前。在这个阶段，可以对地图进行各种交互操作，例如：缩放、平移、搜索地点等
+
+
+
+
+
+不再需要地图或在页面切换时，应销毁地图对象以释放资源。调用map.destroy()方法可销毁地图。在调用map.destroy()方法之前，需要解绑地图上的事件。调用map.destroy()方法后，将地图对象赋值为null，再清除地图容器的 DOM 元素，避免内存泄漏和性能问题
+
+```js
+//解绑地图的点击事件
+map.off("click", clickHandler);
+//销毁地图，并清空地图容器
+map.destroy();
+//地图对象赋值为null
+map = null
+//清除地图容器的 DOM 元素
+document.getElementById("container").remove(); //"container" 为指定 DOM 元素的id
+```
+
+
+
+
+
+
+
+
+
+## 地图状态
+
+## 设置、获取地图中心点和级别 
+
+**设置地图中心点setCenter()**
+
+
+
+setCenter(center, immediately, duration)方法有默认开启过渡动画效果，如果你想关闭动画或对动画有自定义需求，可以使用下面的参数：
+
+center：地图中心点的位置坐标。
+
+immediately：是否立即跳转到目标位置（设置为true，表示会立即跳转。为false时，则是在一段时间内平滑过渡到目标位置）。
+
+duration：动画过渡时长，单位是毫秒（ms），这个参数可以用来控制动画过渡的速度（当immediately参数为false时，此参数才生效）。
+
+
+
+
+
+```vue
+<template>
+    <div>
+        <div id="container"></div>
+        <div v-show="map!=null">
+            <button @click="set">设置中心点</button>
+        </div>
+    </div>
+</template>
+
+<script>
+import {initAMap, destroy} from '../utils/amapUtils'
+
+export default {
+    name: "View1",
+    data()
+    {
+        return {
+            map: null,
+        }
+    },
+    watch:
+        {
+            map(map)
+            {
+                console.log("map对象变化")
+                map.on('complete', function ()
+                {
+                    //地图图块加载完成后触发
+                    console.log("加载完成")
+                });
+            }
+        },
+    methods: {
+        set()
+        {
+            this.map.setCenter([100 + Math.random() * 22, 22 + Math.random() * 20])
+        }
+    },
+    created()
+    {
+        console.log("初始化")
+        initAMap(this);
+    },
+    beforeDestroy()
+    {
+        console.log("销毁")
+        destroy(this.map)
+    },
+}
+</script>
+
+<style scoped>
+#container {
+    padding: 0px;
+    margin: 0px;
+    width: 100%;
+    height: 90vh;
+}
+</style>
+
+```
+
+
+
+
+
+**获取地图中心点getCenter()**
+
+getCenter()方法获取的是地图的实时中心点数据。由于setCenter()方法具有默认的过渡效果，因此如果在调用setCenter()方法后立即使用getCenter()方法来获取地图的中心点数据，可能不会得到预期的结果，因为地图可能还在进行中心点的过渡动画。为了解决这个问题，可以通过监听地图的moveend事件来获取地图中心点数据，这样就可以确保在地图中心点真正改变后再获取其数据
+
+
+
+```vue
+<template>
+    <div>
+        <div id="container"></div>
+        <div v-show="map!=null">
+            <button @click="set">设置中心点</button>
+            <button @click="get">得到中心点</button>
+        </div>
+    </div>
+</template>
+
+<script>
+import {initAMap, destroy} from '../utils/amapUtils'
+
+export default {
+    name: "View1",
+    data()
+    {
+        return {
+            map: null,
+        }
+    },
+    watch:
+        {
+            map(map)
+            {
+                console.log("map对象变化")
+                map.on('complete', function ()
+                {
+                    //地图图块加载完成后触发
+                    console.log("加载完成")
+                });
+            }
+        },
+    methods: {
+        set()
+        {
+            this.map.setCenter([100 + Math.random() * 22, 22 + Math.random() * 20])
+        },
+        get()
+        {
+            const center = this.map.getCenter()
+            console.log(center)
+            window.alert(center);
+        }
+    },
+    created()
+    {
+        console.log("初始化")
+        initAMap(this);
+    },
+    beforeDestroy()
+    {
+        console.log("销毁")
+        destroy(this.map)
+    },
+}
+</script>
+
+<style scoped>
+#container {
+    padding: 0px;
+    margin: 0px;
+    width: 100%;
+    height: 90vh;
+}
+</style>
+
+```
+
+
+
+
+
+![image-20240321144709377](img/高德地图JSAPI学习笔记/image-20240321144709377.png)
+
+
+
+![image-20240321144723733](img/高德地图JSAPI学习笔记/image-20240321144723733.png)
+
+
+
+
+
+
+
+
+
+**设置地图缩放级别setZoom()**
+
+getZoom()方法获取的是地图的实时级别数据。由于getZoom()方法具有默认的过渡效果，因此如果在调用setZoom()方法后立即使用getZoom()方法来获取地图的级别，可能不会得到预期的结果，因为地图可能还在进行缩放的过渡动画。为了解决这个问题，可以通过监听地图的zoomend事件来获取地图级别数据，这样就可以确保在地图缩放级别真正改变后再获取其数据
+
+
+
+```vue
+<template>
+    <div>
+        <div id="container"></div>
+        <div v-show="map!=null">
+            <button @click="set">设置中心点</button>
+            <button @click="get">得到中心点</button>
+            <button @click="setZoom">设置缩放级别</button>
+        </div>
+    </div>
+</template>
+
+<script>
+import {initAMap, destroy} from '../utils/amapUtils'
+
+export default {
+    name: "View1",
+    data()
+    {
+        return {
+            map: null,
+        }
+    },
+    watch:
+        {
+            map(map)
+            {
+                console.log("map对象变化")
+                map.on('complete', function ()
+                {
+                    //地图图块加载完成后触发
+                    console.log("加载完成")
+                });
+            }
+        },
+    methods: {
+        set()
+        {
+            this.map.setCenter([100 + Math.random() * 22, 22 + Math.random() * 20])
+        },
+        get()
+        {
+            const center = this.map.getCenter()
+            console.log(center)
+            window.alert(center);
+        },
+        setZoom()
+        {
+            //3-20
+            this.map.setZoom(3 + parseInt(Math.random() * 15 + ''))
+            /*setInterval(() =>
+            {
+                this.map.setZoom(3 + parseInt(Math.random() * 15 + ''))
+            }, 100)*/
+        }
+    },
+    created()
+    {
+        console.log("初始化")
+        initAMap(this);
+    },
+    beforeDestroy()
+    {
+        console.log("销毁")
+        destroy(this.map)
+    },
+}
+</script>
+
+<style scoped>
+#container {
+    padding: 0px;
+    margin: 0px;
+    width: 100%;
+    height: 90vh;
+}
+</style>
+
+```
+
+
+
+
+
+## 根据覆盖物范围调整视野
+
+根据地图上覆盖物分布情况，使用setFitView()方法自动缩放地图到合适的视野级别，以确保所有覆盖物都在视野范围内
+
+
+
+setFitView(overlays, immediately, avoid, maxZoom)方法接收4个参数,参数均可缺省。
+
+* overlays：地图视野上展示的覆盖物。
+* immediately：是否需要动画过程。
+* avoid：上下左右的像素避让宽度。
+* maxZoom：地图的最大缩放级别。
+
+
+
+
+
+
+
+
+
+## 覆盖物/图层
+
+### 添加覆盖物
+
+覆盖物有多种类型，包括点标记、矢量图形、信息窗体等，均可以使用add()方法添加
+
+add()方法也可以传入一个覆盖物数组，将点标记和矢量圆同时添加到地图上
+
+```js
+map.add([marker, circle]);
+```
+
+
+
+### 获取覆盖物
+
+使用getAllOverlays(type)方法获取已经添加的覆盖物。其中type参数类型包括marker、circle、polyline、polygon，缺省时返回以上所有类型的所有覆盖物
+
+```js
+//获取所有已经添加的覆盖物
+map.getAllOverlays();
+//只获取所有已经添加的 marker
+map.getAllOverlays('marker');
+```
+
+
+
+
+
+### 移除覆盖物
+
+可以使用remove()方法移除覆盖物，参数可以为单个覆盖物对象或是一个包括多个覆盖物对象的数组。也可以使用clearMap()方法移除所有覆盖物
+
+```js
+//单独移除点标记
+map.remove(marker);
+
+//同时移除点标记和矢量圆形
+map.remove([marker,circle]);
+
+//使用 clearMap 方法删除所有覆盖物
+map.clearMap();
+```
+
+
+
+
+
+### 添加图层
+
+地图上可使用add()方法添加各类型的图层，如高德官方的卫星、路网图层，第三方或是自定义图层等
+
+```js
+//构造官方卫星、路网图层
+var layer1 = new AMap.TileLayer.Satellite(); //卫星图层
+var layer2 = new AMap.TileLayer.RoadNet(); //路网图层
+//添加到地图上
+map.add(layer1);
+map.add(layer2);
+```
+
+
+
+
+
+### 设置图层
+
+使用setLayers()方法设置图层，该方法可将多个图层一次性添加到地图上替代地图上原有图层
+
+```js
+//构造官方卫星、路网图层
+var layers = [new AMap.TileLayer.Satellite(), new AMap.TileLayer.RoadNet()];
+//地图上设置图层
+map.setLayers(layers);
+```
+
+
+
+### 获取图层
+
+可以通过getLayers()方法获取地图图层数据
+
+
+
+### 移除图层
+
+通过remove()方法移除地图图层
+
+
+
+
+
+
+
+## 样式
+
+设置地图样式的方式有两种：
+
+* **在地图初始化时设置**
+* 地图创建之后使用 Map 对象的`setMapStyle()`方法
+
+
+
+官方地图样式：
+
+| **参数值**                 | **说明** |
+| -------------------------- | -------- |
+| "amap://styles/normal"     | 标准     |
+| "amap://styles/dark"       | 幻影黑   |
+| "amap://styles/light"      | 月光银   |
+| "amap://styles/whitesmoke" | 远山黛   |
+| "amap://styles/fresh"      | 草色青   |
+| "amap://styles/grey"       | 雅士灰   |
+| "amap://styles/graffiti"   | 涂鸦     |
+| "amap://styles/macaron"    | 马卡龙   |
+| "amap://styles/blue"       | 靛青蓝   |
+| "amap://styles/darkblue"   | 极夜蓝   |
+| "amap://styles/wine"       | 酱籽     |
+
+
+
+
+
 
 
