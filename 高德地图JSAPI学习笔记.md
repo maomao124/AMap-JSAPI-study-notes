@@ -3133,3 +3133,436 @@ export default {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+# 点标记
+
+## 默认点标记
+
+AMap.Marker可以绘制点标记
+
+AMap.Marker类型推荐在数据量为 500 以内时使用。若数据量大于 500 ，推荐使用AMap.LabelMarker，AMap.Marker相较于AMap.LabelMarker有着更加灵活的自定义配置如自定义 CSS 样式，点数量比较多的情况下AMap.LabelMarker可以带来更好的性能
+
+
+
+方法列表：
+
+* **getTitle()** 
+* **getHeight()** 
+* **getIcon()** 
+* **setIcon(icon)** 
+* **getLabel()** 
+* **setLabel(opts)** 
+* **getClickable()** 
+* **setClickable(clickable)** 
+* **getDraggable()** 
+* **setDraggable(draggable)** 
+* **getTop()** 
+* **setTop(isTop)** 
+* **getCursor()** 
+* **setCursor(cursor)** 
+* **getExtData()** 
+* **setExtData(extData)** 
+* **remove()** 
+* **moveTo(targetPosition, opts)** 
+* **moveAlong(path, opts)** 
+* **startMove()** 
+* **stopMove()** 
+* **pauseMove()** 
+* **resumeMove()** 
+* **getMap()** 
+* **setMap(map)** 
+* **addTo(map)** 
+* **add(map)** 
+* **show()** 
+* **hide()** 
+* **getPosition()** 
+* **setPosition(position)** 
+* **getAnchor()** 
+* **setAnchor(anchor)** 
+* **getOffset()** 
+* **setOffset(offset)** 
+* **getAngle()** 
+* **setAngle(angle)** 
+* **getSize()** 
+* **setSize(size)** 
+* **getzIndex()** 
+* **setzIndex(zIndex)** 
+* **getOptions()** 
+* **getContent()** 
+* **setContent(content)** 
+* **getBounds()** 
+
+
+
+
+
+### 添加
+
+```js
+const marker = new AMap.Marker({
+  position: new AMap.LngLat(116.39, 39.9), //经纬度对象，也可以是经纬度构成的一维数组[116.39, 39.9]
+  title: "北京",
+});
+//将创建的点标记添加到已有的地图实例：
+map.add(marker);
+```
+
+
+
+
+
+如果一次性添加多个Marker实例
+
+```js
+//多个点实例组成的数组
+const markerList = [marker1, marker2, marker3];
+map.add(markerList);
+```
+
+
+
+```vue
+<template>
+    <div>
+        <div id="container"></div>
+        <div v-show="map!=null">
+            <button @click="add">添加点标记</button>
+            <button @click="addMore(100)">添加100个点标记</button>
+            <button @click="addMore(1000)">添加1000个点标记</button>
+        </div>
+    </div>
+</template>
+
+<script>
+import {initAMap, destroy} from '../utils/amapUtils'
+
+export default {
+    name: "View1",
+    data()
+    {
+        return {
+            map: null,
+        }
+    },
+    watch:
+        {
+            map(map)
+            {
+                console.log("map对象变化")
+                map.on('complete', function ()
+                {
+                    //地图图块加载完成后触发
+                    console.log("加载完成")
+                });
+            }
+        },
+    methods: {
+        add()
+        {
+            const marker = new AMap.Marker({
+                position: [100 + Math.random() * 22, 22 + Math.random() * 20],
+            })
+            this.map.add(marker);
+        },
+        addMore(size)
+        {
+            const markerList = [];
+            for (let i = 0; i < size; i++)
+            {
+                const marker = new AMap.Marker({
+                    position: [100 + Math.random() * 22, 22 + Math.random() * 20],
+                })
+                markerList.push(marker);
+            }
+            this.map.add(markerList)
+        }
+    },
+    created()
+    {
+        console.log("初始化")
+        initAMap(this);
+    },
+    beforeDestroy()
+    {
+        console.log("销毁")
+        destroy(this.map)
+    },
+}
+</script>
+
+<style scoped>
+#container {
+    padding: 0px;
+    margin: 0px;
+    width: 100%;
+    height: 88vh;
+}
+</style>
+
+```
+
+
+
+![image-20240322105300392](img/高德地图JSAPI学习笔记/image-20240322105300392.png)
+
+
+
+
+
+
+
+
+
+### 移除
+
+删除已有Marker对象使用：map.remove(marker)
+
+```vue
+<template>
+    <div>
+        <div id="container"></div>
+        <div v-show="map!=null">
+            <button @click="add">添加点标记</button>
+            <button @click="remove">移除点标记</button>
+        </div>
+    </div>
+</template>
+
+<script>
+import {initAMap, destroy} from '../utils/amapUtils'
+
+export default {
+    name: "View1",
+    data()
+    {
+        return {
+            map: null,
+            marker: null,
+        }
+    },
+    watch:
+        {
+            map(map)
+            {
+                console.log("map对象变化")
+                map.on('complete', function ()
+                {
+                    //地图图块加载完成后触发
+                    console.log("加载完成")
+                });
+            }
+        },
+    methods: {
+        add()
+        {
+            if (this.marker)
+            {
+                return;
+            }
+            const marker = new AMap.Marker({
+                position: [100 + Math.random() * 22, 22 + Math.random() * 20],
+            })
+            this.marker = marker;
+            this.map.add(marker);
+        },
+        remove()
+        {
+            if (this.marker)
+            {
+                this.map.remove(this.marker);
+                this.marker = null;
+            }
+        }
+    },
+    created()
+    {
+        console.log("初始化")
+        initAMap(this);
+    },
+    beforeDestroy()
+    {
+        console.log("销毁")
+        destroy(this.map)
+    },
+}
+</script>
+
+<style scoped>
+#container {
+    padding: 0px;
+    margin: 0px;
+    width: 100%;
+    height: 88vh;
+}
+</style>
+
+```
+
+
+
+
+
+
+
+
+
+### 添加事件
+
+**事件列表：**
+
+| 序号 |     值     |                             说明                             |
+| :--: | :--------: | :----------------------------------------------------------: |
+|  1   |   click    |                       鼠标左键单击事件                       |
+|  2   |  dblclick  |                       鼠标左键双击事件                       |
+|  3   | rightclick |                       鼠标右键单击事件                       |
+|  4   | mousemove  |                           鼠标移动                           |
+|  5   | mouseover  |                   鼠标移近点标记时触发事件                   |
+|  6   |  mouseout  |                   鼠标移出点标记时触发事件                   |
+|  7   | mousedown  |                 鼠标在点标记上按下时触发事件                 |
+|  8   |  mouseup   |              鼠标在点标记上按下后抬起时触发事件              |
+|  9   | dragstart  |                   开始拖拽点标记时触发事件                   |
+|  10  |  dragging  |                 鼠标拖拽移动点标记时触发事件                 |
+|  11  |  dragend   |                  点标记拖拽移动结束触发事件                  |
+|  12  |   moving   | 点标记在执行moveTo，moveAlong动画时触发事件，Object对象的格式是{passedPath:Array.}。其中passedPath为对象在moveAlong或者moveTo过程中走过的路径。 |
+|  13  |  moveend   | 点标记执行moveTo动画结束时触发事件，也可以由moveAlong方法触发 |
+|  14  | movealong  |            点标记执行moveAlong动画一次后触发事件             |
+|  15  | touchstart |              触摸开始时触发事件，仅适用移动设备              |
+|  16  | touchmove  |           触摸移动进行中时触发事件，仅适用移动设备           |
+|  17  |  touchend  |              触摸结束时触发事件，仅适用移动设备              |
+
+
+
+
+
+```vue
+<template>
+    <div>
+        <div id="container"></div>
+        <div v-show="map!=null">
+            <button @click="add">添加点标记</button>
+            <button @click="remove">移除点标记</button>
+        </div>
+    </div>
+</template>
+
+<script>
+import {initAMap, destroy} from '../utils/amapUtils'
+
+export default {
+    name: "View1",
+    data()
+    {
+        return {
+            map: null,
+            marker: null,
+        }
+    },
+    watch:
+        {
+            map(map)
+            {
+                console.log("map对象变化")
+                map.on('complete', function ()
+                {
+                    //地图图块加载完成后触发
+                    console.log("加载完成")
+                });
+            }
+        },
+    methods: {
+        add()
+        {
+            if (this.marker)
+            {
+                return;
+            }
+            const marker = new AMap.Marker({
+                position: [100 + Math.random() * 22, 22 + Math.random() * 20],
+            })
+            this.marker = marker;
+            this.map.add(marker);
+            marker.on('click', (e) =>
+            {
+                console.log(e)
+                window.alert("点击了坐标点：" + e.target.getPosition())
+            })
+            marker.on('rightclick',(e)=>
+            {
+                console.log("右键单击")
+                window.alert("右键点击了坐标点，可以拖拽：" + e.target.getPosition())
+                marker.setDraggable(true);
+            })
+            marker.on('dragend',(e)=>
+            {
+                window.alert("拖拽结束：" + e.target.getPosition())
+                marker.setDraggable(false);
+            })
+        },
+        remove()
+        {
+            if (this.marker)
+            {
+                this.map.remove(this.marker);
+                this.marker = null;
+            }
+        }
+    },
+    created()
+    {
+        console.log("初始化")
+        initAMap(this);
+    },
+    beforeDestroy()
+    {
+        console.log("销毁")
+        destroy(this.map)
+    },
+}
+</script>
+
+<style scoped>
+#container {
+    padding: 0px;
+    margin: 0px;
+    width: 100%;
+    height: 88vh;
+}
+</style>
+
+```
+
+
+
+
+
+![image-20240322144004455](img/高德地图JSAPI学习笔记/image-20240322144004455.png)
+
+
+
+
+
+![image-20240322144014661](img/高德地图JSAPI学习笔记/image-20240322144014661.png)
+
+
+
+![image-20240322144026691](img/高德地图JSAPI学习笔记/image-20240322144026691.png)
+
+
+
+![image-20240322144037410](img/高德地图JSAPI学习笔记/image-20240322144037410.png)
+
+
+
+
+
