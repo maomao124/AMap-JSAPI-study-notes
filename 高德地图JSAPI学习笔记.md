@@ -3871,7 +3871,7 @@ export default {
 
 监听器：
 
-| 序号 |     值     |                             说明                             |
+| 序号 |     值     |                             说明                  |
 | :--: | :--------: | :----------------------------------------------------------: |
 |  1   |   click    |                       鼠标左键单击事件                       |
 |  2   |  dblclick  |                       鼠标左键双击事件                       |
@@ -4022,4 +4022,201 @@ export default {
 
 
 ## 海量标注
+
+当需要展示海量点标记时，可以使用海量标注AMap.LabelMarker代替AMap.Marker。AMap.LabelMarker不仅可以绘制图标，还可以为图标添加文字信息，样式配置等
+
+当LabelsLayer图层开启避让（collision:true）时，若两个LabelMarker标记发生重叠，rank值较高的LabelMarker标记将显示，而值较低的会被隐藏
+
+方法列表：
+
+* **getName()** 
+* **setName(name)** 
+* **getPosition()** 
+* **setPosition(position)** 
+* **getZooms()** 
+* **setZooms(zooms)** 
+* **getOpacity()** 
+* **setOpacity(opacity)** 
+* **getzIndex()** 
+* **setzIndex(zIndex)** 
+* **getRank()** 
+* **setRank(rank)** 
+* **getText()** 
+* **setText(textOpts)** 
+* **getIcon()** 
+* **setIcon(iconOpts)** 
+* **getOptions()** 
+* **getExtData()** 
+* **setExtData(extData)** 
+* **setTop(isTop)** 
+* **getVisible()** 
+* **getCollision()** 
+* **show()** 
+* **hide()** 
+* **remove()** 
+* **moveTo(targetPosition, opts)** 
+* **moveAlong(path, opts)** 
+* **startMove()** 
+* **stopMove()** 
+* **pauseMove()** 
+* **resumeMove()** 
+
+
+
+
+
+事件：
+
+| 序号 |     值     |                   说明                   |
+| :--: | :--------: | :--------------------------------------: |
+|  1   |   click    |        鼠标左键单击标注触发的事件        |
+|  2   | mousemove  |        鼠标在标注上移动触发的事件        |
+|  3   | mouseover  |          鼠标移进标注时触发事件          |
+|  4   |  mouseout  |          鼠标移出标注时触发事件          |
+|  5   | mousedown  |        鼠标在标注上按下时触发事件        |
+|  6   |  mouseup   |     鼠标在标注上按下后抬起时触发事件     |
+|  7   | touchstart |    触摸开始时触发事件，仅适用移动设备    |
+|  8   | touchmove  | 触摸移动进行中时触发事件，仅适用移动设备 |
+|  9   |  touchend  |    触摸结束时触发事件，仅适用移动设备    |
+
+
+
+
+
+```vue
+<template>
+    <div>
+        <div id="container"></div>
+        <div v-show="map!=null">
+            <button @click="add">添加点标记</button>
+            <button @click="addMore(100)">添加100个点标记</button>
+            <button @click="addMore(1000)">添加1000个点标记</button>
+            <button @click="addMore(10000)">添加10000个点标记</button>
+        </div>
+    </div>
+</template>
+
+<script>
+import {initAMap, destroy} from '../utils/amapUtils'
+
+export default {
+    name: "View1",
+    data()
+    {
+        return {
+            map: null,
+            icon: {
+                type: "image", //图标类型，现阶段只支持 image 类型
+                image: "https://a.amap.com/jsapi_demos/static/demo-center/marker/express2.png", //可访问的图片 URL
+                size: [64, 30], //图片尺寸
+                anchor: "center", //图片相对 position 的锚点，默认为 bottom-center
+            },
+        }
+    },
+    watch:
+        {
+            map(map)
+            {
+                console.log("map对象变化")
+                map.on('complete', function ()
+                {
+                    //地图图块加载完成后触发
+                    console.log("加载完成")
+                });
+            }
+        },
+    methods: {
+        add()
+        {
+            const labelsLayer = new AMap.LabelsLayer({
+                zooms: [3, 20],
+                zIndex: 1000,
+                collision: true, //该层内标注是否避让
+                allowCollision: true, //不同标注层之间是否避让
+            });
+
+            const labelMarker = new AMap.LabelMarker({
+                position: [100 + Math.random() * 22, 22 + Math.random() * 20],
+                name: "标注",
+                zIndex: 16,
+                rank: 1, //避让优先级
+                icon: this.icon,
+            })
+
+            labelsLayer.add(labelMarker);
+            this.map.add(labelsLayer);
+        },
+        addMore(size)
+        {
+            const labelsLayer = new AMap.LabelsLayer({
+                zooms: [3, 20],
+                zIndex: 1000,
+                collision: true, //该层内标注是否避让
+                allowCollision: true, //不同标注层之间是否避让
+            });
+            const markerList = [];
+            for (let i = 0; i < size; i++)
+            {
+                const labelMarker = new AMap.LabelMarker({
+                    position: [100 + Math.random() * 22, 22 + Math.random() * 20],
+                    name: "标注",
+                    zIndex: 16,
+                    rank: 1, //避让优先级
+                    icon: this.icon,
+                })
+                markerList.push(labelMarker);
+            }
+            labelsLayer.add(markerList);
+            this.map.add(labelsLayer);
+        }
+    },
+    created()
+    {
+        console.log("初始化")
+        initAMap(this);
+    },
+    beforeDestroy()
+    {
+        console.log("销毁")
+        destroy(this.map)
+    },
+}
+</script>
+
+<style scoped>
+#container {
+    padding: 0px;
+    margin: 0px;
+    width: 100%;
+    height: 88vh;
+}
+</style>
+
+```
+
+
+
+![image-20240402174726093](img/高德地图JSAPI学习笔记/image-20240402174726093.png)
+
+
+
+
+
+
+
+
+
+## 海量点标记
+
+当需要高效展示海量点标记，但不需要展示文本类信息时，推荐使用AMap.MassMarks
+
+
+
+AMap.MassMarks并不是普通的覆盖物，它是由海量点组成的一个地图图层
+
+MassMarks和LabelMarker的区别在于，MassMarks不支持添加文本，但能自动生成海量点图层，而LabelMarker则需要用户手动添加LabelsLayer海量点图层
+
+
+
+
 
